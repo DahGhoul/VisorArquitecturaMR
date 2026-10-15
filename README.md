@@ -21,7 +21,7 @@
 
 ### **Desarrollado por:**
 **Diego Joel Cuba Moya** & **Ronaldo Carlos Robles Romero**  
-**Empresa:** [roo | Soluciones Digitales](https://github.com/roo-soluciones)
+**Empresa:** **roo | Soluciones Digitales**
 
 </div>
 
@@ -42,9 +42,9 @@ Este proyecto conforma el cliente inmersivo de la suite espacial de **roo | Solu
 └────────────────────────────────────────┘                                  └────────────────────────────────────────┘
 ```
 
-1. **[Visor Arquitectura MR](https://github.com/roo-soluciones/VisorArquitecturaMR) (Este repositorio / Meta Quest):**  
+1. **[Visor Arquitectura MR](https://github.com/DahGhoul/VisorArquitecturaMR) (Este repositorio / Meta Quest):**  
    Aplicación cliente desarrollada en Unity 6 (URP) para Meta Quest y PC VR. Detecta en tiempo real el servidor mediante radar UDP, descarga modelos `.glb`, ejecuta el pipeline PBR y ofrece tres modos ergonómicos de recorrido (Peatón 1:1, Vuelo Dron y Maqueta AR en Passthrough).
-2. **[Portal Arquitectura XR](https://github.com/roo-soluciones/portal-arquitectura-xr) (Python / PC):**  
+2. **[Portal Arquitectura XR](https://github.com/DahGhoul/PortalArquitecturaXR) (Python / PC):**  
    Estación de control y servidor de modelos para la PC del arquitecto. Gestiona la carga de archivos, optimiza mallas con `gltfpack`, emite la señal de radar UDP (puerto `47777`) y sirve los modelos vía HTTP multihilo con RFC 7233 Range Requests.
 
 ---
@@ -161,7 +161,7 @@ Assets/
 
 ### 1. Clonar el Repositorio
 ```bash
-git clone https://github.com/roo-soluciones/VisorArquitecturaMR.git
+git clone https://github.com/DahGhoul/VisorArquitecturaMR.git
 ```
 
 > [!NOTE]
