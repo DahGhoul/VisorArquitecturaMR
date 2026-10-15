@@ -76,46 +76,46 @@ Permite alternar instantáneamente entre tres perspectivas espaciales:
 
 ---
 
-## 📐 Guía de Buenas Prácticas de Exportación a .GLB (Para Modeladores y Arquitectos)
+## 📐 Guía de Buenas Prácticas de Modelado 3D y Exportación a .GLB
 
-> [!IMPORTANT]
-> **El 90% de los errores visuales en VR (suelos invisibles, texturas desplazadas, parpadeos coplanares y cuadros blancos en hojas) se originan por vicios de modelado en SketchUp o Revit.** Sigue estrictamente estas reglas antes de exportar a `.glb`:
+> [!NOTE]
+> **Detección de Materiales 100% Universal (Sin depender de nombres de texto):**  
+> El pipeline del visor **NO te obliga a renombrar materiales ni depende de palabras clave**. El motor examina directamente los bytes del archivo glTF 2.0 en tiempo de ejecución:
+> - Si un material tiene **opacidad menor al 99%**, se convierte automáticamente en **Vidrio URP Transparente**.
+> - Si la textura tiene **canal alfa transparente real (PNG/RGBA)**, se procesa automáticamente como **Vegetación Alpha Cutout** con color natural fotográfico puro.
+> - Si es una superficie sólida, respeta la especificación glTF 2.0 (doble cara o una cara según corresponda).
+>
+> **¿Por qué existe esta guía entonces?**  
+> Porque existen errores puramente **geométricos y de formato en SketchUp** que ningún motor del mundo puede adivinar por arte de magia (como dos caras ocupando exactamente el mismo espacio milimétrico, caras modeladas de espaldas o imágenes sueltas sin geometría). Sigue estas pautas de modelado para garantizar un modelo impecable:
 
-### 1. Cuadros y Láminas: Importar como "Textura" y NUNCA como "Imagen Suelta"
-- **El error común:** En SketchUp es frecuente usar `Archivo > Importar > como Imagen` y pegar una foto, plano o cuadro flotando sobre un muro. Al exportar a glTF/GLB, SketchUp genera una entidad desvinculada que no comparte coordenadas UV con la pared, provocando que la imagen se desfase, flote en el aire o parpadee.
+### 1. Cuadros, Planos y Láminas: Pintar como "Textura" y NUNCA pegar como "Imagen Suelta"
+- **El error común:** En SketchUp es común ir a `Archivo > Importar > como Imagen` y pegar una foto o plano flotando sobre una pared. Al exportar a glTF/GLB, SketchUp NO integra la imagen a la pared: genera una lámina separada flotante sin mapeado UV en la estructura, provocando que se desplace, flote en el aire o parpadee.
 - **La solución correcta:** 
-  1. Crea un **Material nuevo**, cárgale la imagen como textura de mapa y **píntala directamente sobre la cara de la pared**.
-  2. Si necesitas un cuadro físico: modela un marco con volumen real ($1\text{ a }2\text{ cm}$ de espesor) o, si usas una lámina plana, dale clic derecho > **Explotar** y sepárala al menos **$2\text{ mm}$ hacia afuera del muro** para erradicar el parpadeo coplanar (*Z-Fighting*).
+  1. Crea un **Material nuevo**, cárgale la foto como textura y **píntala directamente con el bote de pintura sobre la cara del muro**.
+  2. Si es un cuadro decorativo con relieve: modela un marco con volumen 3D ($1\text{ a }2\text{ cm}$ de espesor) o separa la lámina al menos **$2\text{ mm}$ hacia afuera de la pared** para que dos superficies de distinto material no compitan por la misma coordenada exacta (*Z-Fighting* coplanar).
 
-### 2. Muros Estructurales: Geometría Sólida 3D vs Planos 2D
-- **El error común:** Usar una imagen plana o un plano 2D de grosor $0$ para simular un tabique o división de ambientes.
-- **La solución correcta:** Los sistemas de física en Realidad Virtual (`CharacterController` y `PhysX`) necesitan volumen espacial para frenar al jugador de forma sólida. **Todo muro debe modelarse con grosor real mediante Empujar/Tirar (Push/Pull)** de al menos $10\text{ a }15\text{ cm}$.
+### 2. Muros Estructurales: Geometría Sólida con Espesor (Push/Pull)
+- **El error común:** Usar un plano 2D de grosor $0$ o una imagen plana para simular una pared o tabique.
+- **La solución correcta:** Los motores de colisión física en VR (`CharacterController` y `PhysX`) necesitan volumen espacial para frenar al jugador de rodilla a cabeza de manera sólida. **Todo muro debe tener espesor real modelado con Empujar/Tirar (Push/Pull)** de al menos $10\text{ a }15\text{ cm}$.
 
 ### 3. Suelos Invisibles y Caídas al Vacío: Caras Invertidas y Losas con Espesor
-- **El error común:** Dibujar una losa o vereda como una simple lámina plana de 1 cara donde el lado azul/gris (reverso) queda hacia arriba. En motores de videojuegos y VR, por optimización de rendimiento se aplica *Backface Culling* (descarte de caras traseras): **el reverso es 100% invisible y verás un agujero hacia el vacío**.
+- **El error común:** Modelar una losa, piso o vereda como una simple cara 2D de una sola cara (espesor cero) y dejar el lado azul/gris (reverso) hacia arriba. En motores 3D y VR, el reverso de una cara plana de grosor cero se descarta por optimización (*Backface Culling*), volviéndose **100% invisible y dejando ver el vacío o fondo gris**.
 - **La solución correcta:**
   1. **Espesor real:** Toda losa, piso o pavimento debe tener volumen tridimensional con *Empujar/Tirar* (mínimo $15\text{ a }20\text{ cm}$ hacia abajo).
-  2. **Orientación de normales:** En SketchUp, las caras visibles desde donde camina el usuario deben ser **blancas**. Si ves alguna cara en tono azulado o grisáceo, selecciónala, haz clic derecho y pulsa **Invertir Caras** (*Reverse Faces*).
+  2. **Orientación de normales:** En SketchUp, las caras superiores por donde camina el usuario deben ser **blancas**. Si ves alguna cara en tono azulado o grisáceo: Clic derecho > **Invertir Caras** (*Reverse Faces*).
 
-### 4. Follaje, Lianas y Vegetación: Fondos Transparentes Reales y Sin Tintes
+### 4. Vegetación, Follaje y Enredaderas: PNGs con Transparencia Real y Sin Tintes
 - **El error común:**
-  - Descargar texturas de plantas en formato JPG o con fondos de "cuadritos grises falsos" simulando transparencia: esto genera los temidos **cuadros blancos** o bordes sólidos alrededor de las hojas.
-  - Aplicar un tinte o color de muestra sobre la textura en el panel de materiales de SketchUp: esto "destiñe" o apaga el verde fotográfico natural dejándolo grisáceo o plomizo en VR.
+  - Usar imágenes JPG o imágenes con fondos falsos de cuadritos de Photoshop: generan **cuadros blancos sólidos** alrededor de las hojas.
+  - Aplicar tintes de color sobre la textura en el editor de SketchUp: esto "destiñe" o apaga el verde fotográfico de la textura dejándola plomiza o grisácea en VR.
 - **La solución correcta:**
-  1. Usar únicamente imágenes **PNG con canal alfa transparente genuino**.
-  2. Conservar el material en su color base blanco puro (`#FFFFFF`) para que el visor respete los colores fotográficos originales de las hojas.
-  3. Nombrar el material incluyendo alguna de estas palabras clave: `enredad`, `hoja`, `leaf`, `plant`, `arbol`, `tree` o `liana`. El visor activará automáticamente el sombreador **Alpha Cutout optimizado** sin bordes residuales.
+  1. Usar siempre archivos **PNG con canal alfa transparente genuino**.
+  2. Mantener el material en color blanco base (`#FFFFFF`) para que el visor proyecte el color fotográfico natural de las hojas sin alteraciones.
 
-### 5. Vidrios y Ventanas
-- **El error común:** Pintar vidrio sobre la misma malla del muro o modelar ventanas sin grupo independiente.
-- **La solución correcta:**
-  1. Agrupar la carpintería y el cristal en grupos separados.
-  2. Asignar al material del cristal una opacidad menor al $70\%$ y nombrarlo con `vidrio`, `glass`, `cristal` o `ventana`. El visor le asignará el shader URP transparente con brillo fotométrico.
+### 5. Vidrios y Ventanas: Opacidad Nativa en SketchUp
+- **La solución:** Simplemente asígnale un porcentaje de transparencia/opacidad a tu material en SketchUp (por ejemplo $30\%$ a $50\%$). El visor detecta automáticamente la opacidad del archivo glTF y le aplica el shader URP de vidrio transparente con brillo fotométrico, **sin importar cómo le hayas puesto de nombre al material**.
 
-### 6. Césped y Terrenos Exteriores
-- Nombrar el material con `pasto`, `grass`, `cesped` o `terreno`. El visor aplicará culling de una cara superior para evitar que losas de asfalto o cimientos inferiores se traslapen y parpadeen.
-
-### 7. Limpieza y Purga del Archivo (Regla de Oro antes de Exportar)
+### 6. Limpieza y Purga del Archivo (Antes de Exportar a .GLB)
 1. **Purgar no usados:** En SketchUp ve a `Ventana > Información del modelo > Estadísticas > Purgar no usados`. Esto elimina gigabytes de materiales huérfanos, bloques invisibles y geometrías residuales.
 2. **Modelar cerca del Origen (0,0,0):** Asegúrate de que el proyecto esté ubicado cerca del eje de coordenadas inicial. Modelar a cientos de metros del origen causa temblores de cámara (*jittering*) en visores VR por pérdida de precisión numérica.
 3. **Formato:** Exportar siempre como **`.glb` binario (glTF 2.0)** con unidades en **metros**. Presupuesto sugerido: menor a $2\text{M}$ de polígonos para Meta Quest autónomo (o usar la optimización con `gltfpack` desde Portal Arquitectura XR).
