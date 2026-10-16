@@ -165,6 +165,10 @@ public partial class VisorArquitecturaManager : MonoBehaviour
     private TextMeshProUGUI txtBtnPeaton, txtBtnDron, txtBtnMaqueta;
     private List<GameObject> filasProyectosDinamicos = new List<GameObject>();
     private List<string> listaNombresModelos = new List<string>();
+    private int paginaActualModelos = 0;
+    private string modeloActivoServidor = "";
+    private TextMeshProUGUI txtPaginacionUI;
+    private GameObject btnPagAnt, btnPagSig;
 
     // Paleta cromática corporativa: Grafito Neutro & Blanco Puro
     private readonly Color colVentanaGrafito = new Color(0.08f, 0.08f, 0.09f, 0.94f);

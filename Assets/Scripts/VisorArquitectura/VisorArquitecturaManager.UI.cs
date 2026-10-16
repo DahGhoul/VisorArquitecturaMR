@@ -161,8 +161,11 @@ public partial class VisorArquitecturaManager
         rtLinea.sizeDelta = new Vector2(800f, 1.5f);
         linea.AddComponent<Image>().color = new Color(0.20f, 0.20f, 0.23f, 1f);
 
-        // Encabezado de la lista de proyectos
-        CrearTextoUI("MODELOS DISPONIBLES (.GLB)", rtVentana, new Vector2(-260f, 118f), new Vector2(280f, 24f), 12f, colTextoSecundario, FontStyles.Bold, TextAlignmentOptions.Left);
+        // Encabezado de la lista de proyectos y controles de paginación VR
+        CrearTextoUI("MODELOS DISPONIBLES (.GLB)", rtVentana, new Vector2(-220f, 118f), new Vector2(360f, 24f), 12f, colTextoSecundario, FontStyles.Bold, TextAlignmentOptions.Left);
+        btnPagAnt = CrearBotonRedondeado("BTN_PAG_ANT", "< Ant.", rtVentana, new Vector2(185f, 118f), new Vector2(68f, 28f), colBotonInactivo, colTextoClaro, 11.5f);
+        txtPaginacionUI = CrearTextoUI("Pág. 1/1", rtVentana, new Vector2(275f, 118f), new Vector2(95f, 26f), 12f, colTextoSecundario, FontStyles.Bold, TextAlignmentOptions.Center);
+        btnPagSig = CrearBotonRedondeado("BTN_PAG_SIG", "Sig. >", rtVentana, new Vector2(365f, 118f), new Vector2(68f, 28f), colBotonInactivo, colTextoClaro, 11.5f);
 
         // --- 2. MODAL DESPLEGABLE DE PIN ---
         panelModalPin = CrearPanelRedondeado("Modal_PIN", rtVentana, new Vector2(0f, -15f), new Vector2(340f, 320f), colTarjetaGrafito);
@@ -207,7 +210,7 @@ public partial class VisorArquitecturaManager
     }
 
     /// <summary>
-    /// Regenera dinámicamente los botones de selección para cada modelo .glb disponible.
+    /// Regenera dinámicamente los botones de selección para cada modelo .glb disponible con soporte de paginación.
     /// </summary>
     private void ReconstruirListaProyectosUI()
     {
@@ -221,25 +224,41 @@ public partial class VisorArquitecturaManager
 
         if (listaNombresModelos.Count == 0)
         {
-            GameObject vacio = CrearTextoUI("No hay modelos disponibles. Abre Portal Arquitectura XR en tu PC o usa 'Vincular PIN'.", rtVentana, new Vector2(0f, -10f), new Vector2(680f, 60f), 15f, colTextoSecundario, FontStyles.Normal, TextAlignmentOptions.Center).gameObject;
+            if (txtPaginacionUI != null) txtPaginacionUI.text = "0 modelos";
+            if (btnPagAnt != null) btnPagAnt.SetActive(false);
+            if (btnPagSig != null) btnPagSig.SetActive(false);
+            GameObject vacio = CrearTextoUI("No hay modelos disponibles. Abre Portal Arquitectura XR en tu PC o usa 'PIN'.", rtVentana, new Vector2(0f, -10f), new Vector2(680f, 60f), 15f, colTextoSecundario, FontStyles.Normal, TextAlignmentOptions.Center).gameObject;
             filasProyectosDinamicos.Add(vacio);
             return;
         }
 
-        int max = Mathf.Min(listaNombresModelos.Count, 4);
-        for (int i = 0; i < max; i++)
+        const int porPagina = 4;
+        int totalPaginas = Mathf.Max(1, Mathf.CeilToInt(listaNombresModelos.Count / (float)porPagina));
+        paginaActualModelos = Mathf.Clamp(paginaActualModelos, 0, totalPaginas - 1);
+
+        if (txtPaginacionUI != null)
+            txtPaginacionUI.text = "Pág. " + (paginaActualModelos + 1) + " / " + totalPaginas + " (" + listaNombresModelos.Count + ")";
+        if (btnPagAnt != null) btnPagAnt.SetActive(totalPaginas > 1);
+        if (btnPagSig != null) btnPagSig.SetActive(totalPaginas > 1);
+
+        int inicio = paginaActualModelos * porPagina;
+        int fin = Mathf.Min(inicio + porPagina, listaNombresModelos.Count);
+
+        for (int idxLista = inicio; idxLista < fin; idxLista++)
         {
-            string id = listaNombresModelos[i];
+            int filaLocal = idxLista - inicio;
+            string id = listaNombresModelos[idxLista];
             bool esRed = id.StartsWith("PC:");
             string nombreArchivo = id.Replace("PC:", "").Replace("GUARDADO:", "").Replace("LOCAL:", "");
-            string origenTag = esRed ? "RED LOCAL" : "MEMORIA";
+            bool esActivoPC = esRed && !string.IsNullOrEmpty(modeloActivoServidor) && nombreArchivo == modeloActivoServidor;
+            string origenTag = esActivoPC ? "RED LOCAL • ACTIVO" : (esRed ? "RED LOCAL" : "MEMORIA");
 
-            float y = 62f - i * 64f;
-            GameObject fila = CrearBotonRedondeado("BTN_MOD_" + i, "", rtVentana, new Vector2(0f, y), new Vector2(800f, 54f), colTarjetaGrafito, colTextoClaro, 15f);
+            float y = 62f - filaLocal * 64f;
+            GameObject fila = CrearBotonRedondeado("BTN_MOD_" + idxLista, "", rtVentana, new Vector2(0f, y), new Vector2(800f, 54f), colTarjetaGrafito, colTextoClaro, 15f);
             RectTransform rtFila = fila.GetComponent<RectTransform>();
 
-            CrearTextoUI(nombreArchivo, rtFila, new Vector2(-120f, 0f), new Vector2(500f, 40f), 16f, colTextoClaro, FontStyles.Bold, TextAlignmentOptions.Left);
-            CrearTextoUI(origenTag, rtFila, new Vector2(210f, 0f), new Vector2(140f, 30f), 12f, colTextoSecundario, FontStyles.Normal, TextAlignmentOptions.Right);
+            CrearTextoUI(nombreArchivo, rtFila, new Vector2(-130f, 0f), new Vector2(480f, 40f), 15.5f, colTextoClaro, FontStyles.Bold, TextAlignmentOptions.Left);
+            CrearTextoUI(origenTag, rtFila, new Vector2(195f, 0f), new Vector2(170f, 30f), 11.5f, esActivoPC ? colTextoClaro : colTextoSecundario, esActivoPC ? FontStyles.Bold : FontStyles.Normal, TextAlignmentOptions.Right);
             CrearTextoUI("Abrir  ->", rtFila, new Vector2(335f, 0f), new Vector2(90f, 30f), 14f, colTextoClaro, FontStyles.Bold, TextAlignmentOptions.Right);
 
             if (panelModalPin != null && panelModalPin.activeSelf)
@@ -297,6 +316,23 @@ public partial class VisorArquitecturaManager
             int idx = int.Parse(id.Replace("BTN_MOD_", ""));
             if (idx >= 0 && idx < listaNombresModelos.Count)
                 CargarModeloPorIdentificador(listaNombresModelos[idx]);
+        }
+        else if (id == "BTN_PAG_ANT")
+        {
+            if (paginaActualModelos > 0)
+            {
+                paginaActualModelos--;
+                ReconstruirListaProyectosUI();
+            }
+        }
+        else if (id == "BTN_PAG_SIG")
+        {
+            int totalPaginas = Mathf.Max(1, Mathf.CeilToInt(listaNombresModelos.Count / 4.0f));
+            if (paginaActualModelos < totalPaginas - 1)
+            {
+                paginaActualModelos++;
+                ReconstruirListaProyectosUI();
+            }
         }
         else if (id == "BTN_TOGGLE_GIRO") AlternarModoGiroConfort();
         else if (id == "BTN_ACT_REFRESCAR") RefrescarListaModelos();

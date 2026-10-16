@@ -146,6 +146,7 @@ public partial class VisorArquitecturaManager
     /// </summary>
     public void RefrescarListaModelos()
     {
+        paginaActualModelos = 0;
         listaNombresModelos.Clear();
         if (Directory.Exists(Application.persistentDataPath))
         {
@@ -172,19 +173,45 @@ public partial class VisorArquitecturaManager
     }
 
     /// <summary>
-    /// Procesa la respuesta JSON del servidor y actualiza la lista interna de modelos disponibles.
+    /// Procesa la respuesta JSON del servidor y coloca los modelos de RED LOCAL (PC:)
+    /// en primer lugar (encabezados por el modelo activo), seguidos de los modelos en MEMORIA (GUARDADO:).
     /// </summary>
     private void ProcesarJsonLista(string json)
     {
         EstadoPortalResponse resp = JsonUtility.FromJson<EstadoPortalResponse>(json);
         if (resp != null && resp.modelos != null)
         {
+            modeloActivoServidor = resp.modelo_activo ?? "";
+            List<string> modelosRed = new List<string>();
+
+            if (!string.IsNullOrEmpty(modeloActivoServidor))
+            {
+                foreach (string m in resp.modelos)
+                {
+                    if (m == modeloActivoServidor)
+                    {
+                        modelosRed.Add("PC:" + m);
+                        break;
+                    }
+                }
+            }
+
             foreach (string m in resp.modelos)
             {
                 string item = "PC:" + m;
-                if (!listaNombresModelos.Contains(item)) listaNombresModelos.Add(item);
+                if (!modelosRed.Contains(item))
+                    modelosRed.Add(item);
             }
-            ActualizarEstado("Servidor activo: " + resp.pc + " (" + resp.modelos.Length + " modelos)");
+
+            // Insertar todos los modelos de RED LOCAL al inicio de la lista (antes que los GUARDADO:)
+            for (int i = modelosRed.Count - 1; i >= 0; i--)
+            {
+                listaNombresModelos.Remove(modelosRed[i]);
+                listaNombresModelos.Insert(0, modelosRed[i]);
+            }
+
+            paginaActualModelos = 0;
+            ActualizarEstado("Servidor activo: " + resp.pc + " (" + resp.modelos.Length + " en red)");
         }
         ReconstruirListaProyectosUI();
     }
