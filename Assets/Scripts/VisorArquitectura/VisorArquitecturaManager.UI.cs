@@ -1,9 +1,9 @@
 // ================================================================================================
 // PROYECTO: Visor Arquitectura MR (Meta Quest / PC VR)
-// EMPRESA: roo | Soluciones Digitales
-// LEMA: "Tecnología con Propósito — El futuro, simple"
+// ORIGEN: Universidad Nacional de Trujillo (UNT) — Ing. de Sistemas & Arquitectura
+// COLABORACIÓN: roo | Soluciones Digitales ("Tecnología con Propósito — El futuro, simple")
 // AUTORES: Diego Joel Cuba Moya & Ronaldo Carlos Robles Romero
-// COPYRIGHT: © 2026 roo Soluciones Digitales. Todos los derechos reservados.
+// NATURALEZA: Desarrollo académico e innovación tecnológica interdisciplinaria (Sin fines de lucro)
 // ================================================================================================
 
 using System;
@@ -218,7 +218,7 @@ public partial class VisorArquitecturaManager
 
         if (listaNombresModelos.Count == 0)
         {
-            GameObject vacio = CrearTextoUI("No hay modelos disponibles. Abre Portal Arquitecto en tu PC o usa 'Vincular PIN'.", rtVentana, new Vector2(0f, -10f), new Vector2(680f, 60f), 15f, colTextoSecundario, FontStyles.Normal, TextAlignmentOptions.Center).gameObject;
+            GameObject vacio = CrearTextoUI("No hay modelos disponibles. Abre Portal Arquitectura XR en tu PC o usa 'Vincular PIN'.", rtVentana, new Vector2(0f, -10f), new Vector2(680f, 60f), 15f, colTextoSecundario, FontStyles.Normal, TextAlignmentOptions.Center).gameObject;
             filasProyectosDinamicos.Add(vacio);
             return;
         }

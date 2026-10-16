@@ -1,9 +1,9 @@
 // ================================================================================================
 // PROYECTO: Visor Arquitectura MR (Meta Quest / PC VR)
-// EMPRESA: roo | Soluciones Digitales
-// LEMA: "Tecnología con Propósito — El futuro, simple"
+// ORIGEN: Universidad Nacional de Trujillo (UNT) — Ing. de Sistemas & Arquitectura
+// COLABORACIÓN: roo | Soluciones Digitales ("Tecnología con Propósito — El futuro, simple")
 // AUTORES: Diego Joel Cuba Moya & Ronaldo Carlos Robles Romero
-// COPYRIGHT: © 2026 roo Soluciones Digitales. Todos los derechos reservados.
+// NATURALEZA: Desarrollo académico e innovación tecnológica interdisciplinaria (Sin fines de lucro)
 // ================================================================================================
 
 using System;
@@ -44,7 +44,8 @@ public partial class VisorArquitecturaManager
 
     /// <summary>
     /// Auto-detecta la jerarquía de controladores y cámara, desactivando componentes de locomoción
-    /// o teletransporte heredados para evitar colisiones y conflictos en el bucle de entrada.
+    /// o teletransporte heredados (incluyendo ControllerInputActionManager y Teleport Interactor)
+    /// para evitar la aparición de la línea roja de teletransporte al avanzar en Modo Dron o Peatón.
     /// </summary>
     private void ConfigurarEscenaYDesactivarLocomocionVieja()
     {
@@ -68,7 +69,23 @@ public partial class VisorArquitecturaManager
             else if (mainCamera != null && mainCamera.transform.root != null) xrOrigin = mainCamera.transform.root;
         }
 
-        // 1. Desactivar GameObjects de locomoción obsoleta
+        // 1. Desactivar componentes MonoBehaviour de interacción y locomoción conflictivos PRIMERO
+        // (Especialmente ControllerInputActionManager, que reactivaba el Teleport Interactor rojo al mover el stick)
+        MonoBehaviour[] todosLosScripts = FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach (MonoBehaviour mb in todosLosScripts)
+        {
+            if (mb == null || mb == this) continue;
+            string n = mb.GetType().Name.ToLowerInvariant();
+            if (n.Contains("turnprovider") || n.Contains("moveprovider") || n.Contains("teleportation") ||
+                n.Contains("gravityprovider") || n.Contains("charactercontrollerdriver") ||
+                n.Contains("snapturn") || n.Contains("locomotionmediator") || n.Contains("locomotioncontroller") ||
+                n.Contains("controllerinputactionmanager"))
+            {
+                mb.enabled = false;
+            }
+        }
+
+        // 2. Desactivar GameObjects de locomoción obsoleta y neutralizar permanentemente cualquier línea de Teleport
         GameObject[] todosLosObjetos = FindObjectsByType<GameObject>(FindObjectsInactive.Include, FindObjectsSortMode.None);
         foreach (GameObject go in todosLosObjetos)
         {
@@ -78,21 +95,15 @@ public partial class VisorArquitecturaManager
                 nom.Contains("teleport") || nom.Contains("snapturn") || nom.Contains("continuousmove") ||
                 nom.Contains("tunneling") || nom.Contains("climb") || nom == "gravity" || nom == "jump")
             {
+                foreach (LineRenderer lr in go.GetComponentsInChildren<LineRenderer>(true))
+                {
+                    lr.enabled = false;
+                }
+                foreach (MonoBehaviour comp in go.GetComponentsInChildren<MonoBehaviour>(true))
+                {
+                    if (comp != null && comp != this) comp.enabled = false;
+                }
                 go.SetActive(false);
-            }
-        }
-
-        // 2. Desactivar componentes MonoBehaviour de interacción conflictivos
-        MonoBehaviour[] todosLosScripts = FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-        foreach (MonoBehaviour mb in todosLosScripts)
-        {
-            if (mb == null || mb == this) continue;
-            string n = mb.GetType().Name.ToLowerInvariant();
-            if (n.Contains("turnprovider") || n.Contains("moveprovider") || n.Contains("teleportation") ||
-                n.Contains("gravityprovider") || n.Contains("charactercontrollerdriver") ||
-                n.Contains("snapturn") || n.Contains("locomotionmediator") || n.Contains("locomotioncontroller"))
-            {
-                mb.enabled = false;
             }
         }
 
@@ -105,6 +116,7 @@ public partial class VisorArquitecturaManager
                 if (t.name == "Left Controller") manoIzquierdaTransform = t;
                 if (t.name == "Near-Far Interactor" || t.name == "Ray Interactor")
                 {
+                    if (!t.gameObject.activeSelf) t.gameObject.SetActive(true);
                     if (manoDerechaTransform != null && t.IsChildOf(manoDerechaTransform))
                         punteroNativoDerecho = t;
                 }

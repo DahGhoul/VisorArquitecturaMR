@@ -1,9 +1,9 @@
 // ================================================================================================
 // PROYECTO: Visor Arquitectura MR (Meta Quest / PC VR)
-// EMPRESA: roo | Soluciones Digitales
-// LEMA: "Tecnología con Propósito — El futuro, simple"
+// ORIGEN: Universidad Nacional de Trujillo (UNT) — Ing. de Sistemas & Arquitectura
+// COLABORACIÓN: roo | Soluciones Digitales ("Tecnología con Propósito — El futuro, simple")
 // AUTORES: Diego Joel Cuba Moya & Ronaldo Carlos Robles Romero
-// COPYRIGHT: © 2026 roo Soluciones Digitales. Todos los derechos reservados.
+// NATURALEZA: Desarrollo académico e innovación tecnológica interdisciplinaria (Sin fines de lucro)
 // ================================================================================================
 
 using UnityEngine;
