@@ -295,6 +295,12 @@ public partial class VisorArquitecturaManager
             return;
         }
 
+        // Separación de eje dominante en el Stick Derecho:
+        // Evita que al subir/bajar en Modo Dron el pulgar gire accidentalmente la cámara en espiral (causa #1 de mareo en Dron).
+        bool ejeHorizontalDominante = !modoDron || (Mathf.Abs(stickDer.x) > Mathf.Abs(stickDer.y) * 1.25f);
+        bool ejeVerticalDominante = Mathf.Abs(stickDer.y) > Mathf.Abs(stickDer.x) * 1.15f;
+        float actividadGiroSuave = 0f;
+
         // --- ROTACIÓN DE CÁMARA ANTINÁUSEA (GIRO CONFORT POR PASOS O GIRO SUAVE) ---
         if (usarGiroConfort)
         {
@@ -302,7 +308,7 @@ public partial class VisorArquitecturaManager
             {
                 snapTurnListo = true;
             }
-            else if (Mathf.Abs(stickDer.x) > 0.60f && (snapTurnListo || Time.unscaledTime - tiempoUltimoSnapTurn > 0.34f))
+            else if (ejeHorizontalDominante && Mathf.Abs(stickDer.x) > 0.60f && (snapTurnListo || Time.unscaledTime - tiempoUltimoSnapTurn > 0.34f))
             {
                 float signo = Mathf.Sign(stickDer.x);
                 xrOrigin.RotateAround(mainCamera.transform.position, Vector3.up, signo * anguloGiroConfort);
@@ -310,9 +316,10 @@ public partial class VisorArquitecturaManager
                 tiempoUltimoSnapTurn = Time.unscaledTime;
             }
         }
-        else if (Mathf.Abs(stickDer.x) > 0.22f)
+        else if (ejeHorizontalDominante && Mathf.Abs(stickDer.x) > 0.25f)
         {
             xrOrigin.RotateAround(mainCamera.transform.position, Vector3.up, stickDer.x * velocidadGiroSuave * Time.deltaTime);
+            actividadGiroSuave = Mathf.Abs(stickDer.x) * 2.2f;
         }
 
         Vector3 frente = mainCamera.transform.forward;
@@ -345,8 +352,8 @@ public partial class VisorArquitecturaManager
             // para que mirar arriba/abajo con el casco no provoque curvas tipo montaña rusa.
             Vector3 deseoDron = inputDir * velocidadDron;
 
-            // El Stick Derecho (arriba/abajo) controla la elevación vertical como una grúa estable
-            if (Mathf.Abs(stickDer.y) > 0.20f)
+            // El Stick Derecho (arriba/abajo) controla la elevación vertical exclusivamente cuando el eje Y es dominante
+            if (ejeVerticalDominante && Mathf.Abs(stickDer.y) > 0.22f)
             {
                 deseoDron.y += stickDer.y * (velocidadDron * 0.70f);
             }
@@ -361,7 +368,7 @@ public partial class VisorArquitecturaManager
             float tasaRespuestaDron = deseoDron.sqrMagnitude > 0.01f ? 14f : 28f;
             velocidadSuavizada = Vector3.MoveTowards(velocidadSuavizada, deseoDron, tasaRespuestaDron * Time.deltaTime);
             xrOrigin.position += velocidadSuavizada * Time.deltaTime;
-            ActualizarVinetaConfort(velocidadSuavizada.magnitude);
+            ActualizarVinetaConfort(Mathf.Max(velocidadSuavizada.magnitude, actividadGiroSuave));
             Physics.SyncTransforms();
             return;
         }
