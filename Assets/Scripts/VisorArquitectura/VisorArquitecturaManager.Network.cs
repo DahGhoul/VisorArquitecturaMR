@@ -236,6 +236,8 @@ public partial class VisorArquitecturaManager
         }
 
         ActualizarEstado("Procesando geometría y materiales...");
+        SanitizarGLBEnDisco(rutaLocalCasco);
+
         if (contenedorModelo != null) Destroy(contenedorModelo);
 
         contenedorModelo = new GameObject("Contenedor_Arquitectura");
@@ -254,5 +256,58 @@ public partial class VisorArquitecturaManager
         {
             ActualizarEstado("Error al leer el archivo .glb.");
         }
+    }
+
+    /// <summary>
+    /// Neutraliza in-place (en &lt; 1 ms y sin tocar el chunk binario de geometría) la extensión obsoleta
+    /// KHR_materials_pbrSpecularGlossiness exportada por plugins como SimLab GLTF en SketchUp,
+    /// asegurando que glTFast utilice siempre el bloque estándar pbrMetallicRoughness.
+    /// </summary>
+    private void SanitizarGLBEnDisco(string rutaArchivo)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(rutaArchivo) || !File.Exists(rutaArchivo)) return;
+
+            using (FileStream fs = new FileStream(rutaArchivo, FileMode.Open, FileAccess.ReadWrite, FileShare.Read))
+            {
+                if (fs.Length < 28) return;
+                byte[] header = new byte[20];
+                if (fs.Read(header, 0, 20) != 20) return;
+
+                uint magic = BitConverter.ToUInt32(header, 0);
+                uint jsonLen = BitConverter.ToUInt32(header, 12);
+                uint jsonType = BitConverter.ToUInt32(header, 16);
+
+                // 0x46546C67 = "glTF", 0x4E4F534A = "JSON"
+                if (magic != 0x46546C67 || jsonType != 0x4E4F534A) return;
+                if (jsonLen == 0 || jsonLen > 50 * 1024 * 1024 || 20 + jsonLen > fs.Length) return;
+
+                byte[] jsonBytes = new byte[jsonLen];
+                int leidos = 0;
+                while (leidos < (int)jsonLen)
+                {
+                    int n = fs.Read(jsonBytes, leidos, (int)jsonLen - leidos);
+                    if (n <= 0) break;
+                    leidos += n;
+                }
+                if (leidos != (int)jsonLen) return;
+
+                string jsonStr = Encoding.UTF8.GetString(jsonBytes);
+                if (!jsonStr.Contains("KHR_materials_pbrSpecularGlossiness")) return;
+
+                // Reemplazo exacto byte a byte (35 caracteres ASCII = 35 bytes UTF-8)
+                string limpio = jsonStr.Replace("KHR_materials_pbrSpecularGlossiness", "_HR_materials_pbrSpecularGlossiness");
+                byte[] nuevosBytes = Encoding.UTF8.GetBytes(limpio);
+
+                if (nuevosBytes.Length == jsonBytes.Length)
+                {
+                    fs.Seek(20, SeekOrigin.Begin);
+                    fs.Write(nuevosBytes, 0, nuevosBytes.Length);
+                    fs.Flush();
+                }
+            }
+        }
+        catch { }
     }
 }

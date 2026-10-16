@@ -271,7 +271,7 @@ public partial class VisorArquitecturaManager
         string nombreMat = matOrig.name.ToLowerInvariant();
         Material m = new Material(matOrig);
 
-        if (m.shader == null || !m.shader.isSupported || m.shader.name.Contains("Error"))
+        if (m.shader == null || !m.shader.isSupported || m.shader.name.Contains("Error") || m.shader.name.Contains("SpecularGlossiness"))
         {
             m = ConvertirAURPLitConservandoMapas(matOrig);
         }
@@ -488,6 +488,12 @@ public partial class VisorArquitecturaManager
             else if (matOrig.HasProperty("_BaseMap_ST"))
             {
                 Vector4 st = matOrig.GetVector("_BaseMap_ST");
+                escala = new Vector2(st.x, st.y);
+                offset = new Vector2(st.z, st.w);
+            }
+            else if (matOrig.HasProperty("diffuseTexture_ST"))
+            {
+                Vector4 st = matOrig.GetVector("diffuseTexture_ST");
                 escala = new Vector2(st.x, st.y);
                 offset = new Vector2(st.z, st.w);
             }
