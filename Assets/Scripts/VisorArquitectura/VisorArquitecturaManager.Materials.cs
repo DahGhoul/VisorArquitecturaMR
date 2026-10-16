@@ -280,12 +280,25 @@ public partial class VisorArquitecturaManager
         if (m.HasProperty("baseColorFactor")) colBase = m.GetColor("baseColorFactor");
         else if (m.HasProperty("_BaseColor")) colBase = m.GetColor("_BaseColor");
         else if (m.HasProperty("_Color")) colBase = m.GetColor("_Color");
+        else if (m.HasProperty("diffuseFactor")) colBase = m.GetColor("diffuseFactor");
+        else if (m.HasProperty("_DiffuseFactor")) colBase = m.GetColor("_DiffuseFactor");
 
         Texture texBase = null;
         if (m.HasProperty("baseColorTexture")) texBase = m.GetTexture("baseColorTexture");
         if (texBase == null && m.HasProperty("_BaseMap")) texBase = m.GetTexture("_BaseMap");
         if (texBase == null && m.HasProperty("_MainTex")) texBase = m.GetTexture("_MainTex");
+        if (texBase == null && m.HasProperty("diffuseTexture")) texBase = m.GetTexture("diffuseTexture");
+        if (texBase == null && m.HasProperty("_DiffuseMap")) texBase = m.GetTexture("_DiffuseMap");
         if (texBase == null) texBase = m.mainTexture;
+        if (texBase == null && matOrig != null)
+        {
+            if (matOrig.HasProperty("baseColorTexture")) texBase = matOrig.GetTexture("baseColorTexture");
+            if (texBase == null && matOrig.HasProperty("_BaseMap")) texBase = matOrig.GetTexture("_BaseMap");
+            if (texBase == null && matOrig.HasProperty("_MainTex")) texBase = matOrig.GetTexture("_MainTex");
+            if (texBase == null && matOrig.HasProperty("diffuseTexture")) texBase = matOrig.GetTexture("diffuseTexture");
+            if (texBase == null && matOrig.HasProperty("_DiffuseMap")) texBase = matOrig.GetTexture("_DiffuseMap");
+            if (texBase == null) texBase = matOrig.mainTexture;
+        }
 
         bool tieneTextura = (texBase != null);
         bool tieneAlfaEnTextura = tieneTextura && TexturaTieneCanalAlfa(texBase);
@@ -394,6 +407,13 @@ public partial class VisorArquitecturaManager
             Color colSolido = new Color(colBase.r, colBase.g, colBase.b, 1.0f);
             AsignarColorUniversal(m, colSolido);
         }
+        else
+        {
+            if (colBase.r < 0.08f && colBase.g < 0.08f && colBase.b < 0.08f)
+            {
+                AsignarColorUniversal(m, Color.white);
+            }
+        }
 
         // CULLING NATIVO: Respeta la especificación glTF 2.0 exportada por el motor BIM/CAD
         int cullOriginal = matOrig.HasProperty("_Cull") ? matOrig.GetInt("_Cull") : (int)UnityEngine.Rendering.CullMode.Back;
@@ -437,14 +457,23 @@ public partial class VisorArquitecturaManager
         if (matOrig.HasProperty("baseColorFactor")) c = matOrig.GetColor("baseColorFactor");
         else if (matOrig.HasProperty("_BaseColor")) c = matOrig.GetColor("_BaseColor");
         else if (matOrig.HasProperty("_Color")) c = matOrig.GetColor("_Color");
-        AsignarColorUniversal(nuevo, c);
+        else if (matOrig.HasProperty("diffuseFactor")) c = matOrig.GetColor("diffuseFactor");
+        else if (matOrig.HasProperty("_DiffuseFactor")) c = matOrig.GetColor("_DiffuseFactor");
 
         // Textura principal y transformación UV (Escala y Desplazamiento)
         Texture tex = null;
         if (matOrig.HasProperty("baseColorTexture")) tex = matOrig.GetTexture("baseColorTexture");
         if (tex == null && matOrig.HasProperty("_BaseMap")) tex = matOrig.GetTexture("_BaseMap");
         if (tex == null && matOrig.HasProperty("_MainTex")) tex = matOrig.GetTexture("_MainTex");
+        if (tex == null && matOrig.HasProperty("diffuseTexture")) tex = matOrig.GetTexture("diffuseTexture");
+        if (tex == null && matOrig.HasProperty("_DiffuseMap")) tex = matOrig.GetTexture("_DiffuseMap");
         if (tex == null) tex = matOrig.mainTexture;
+
+        if (tex != null && c.r < 0.08f && c.g < 0.08f && c.b < 0.08f)
+        {
+            c = Color.white;
+        }
+        AsignarColorUniversal(nuevo, c);
 
         if (tex != null)
         {
