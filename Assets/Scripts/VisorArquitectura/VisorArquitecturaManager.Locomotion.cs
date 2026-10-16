@@ -301,14 +301,15 @@ public partial class VisorArquitecturaManager
         bool ejeVerticalDominante = Mathf.Abs(stickDer.y) > Mathf.Abs(stickDer.x) * 1.15f;
         float actividadGiroSuave = 0f;
 
-        // --- ROTACIÓN DE CÁMARA ANTINÁUSEA (GIRO CONFORT POR PASOS O GIRO SUAVE) ---
-        if (usarGiroConfort)
+        // --- ROTACIÓN HÍBRIDA INTELIGENTE (PEATÓN: SNAP TURN 35° | DRON: GIRO ORBITAL SUAVE CON EJE BLOQUEADO) ---
+        bool aplicarSnapEnModoActual = usarGiroConfort && !modoDron;
+        if (aplicarSnapEnModoActual)
         {
             if (Mathf.Abs(stickDer.x) < 0.25f)
             {
                 snapTurnListo = true;
             }
-            else if (ejeHorizontalDominante && Mathf.Abs(stickDer.x) > 0.60f && (snapTurnListo || Time.unscaledTime - tiempoUltimoSnapTurn > 0.34f))
+            else if (Mathf.Abs(stickDer.x) > 0.60f && (snapTurnListo || Time.unscaledTime - tiempoUltimoSnapTurn > 0.34f))
             {
                 float signo = Mathf.Sign(stickDer.x);
                 xrOrigin.RotateAround(mainCamera.transform.position, Vector3.up, signo * anguloGiroConfort);
@@ -316,10 +317,12 @@ public partial class VisorArquitecturaManager
                 tiempoUltimoSnapTurn = Time.unscaledTime;
             }
         }
-        else if (ejeHorizontalDominante && Mathf.Abs(stickDer.x) > 0.25f)
+        else if (ejeHorizontalDominante && Mathf.Abs(stickDer.x) > 0.24f)
         {
-            xrOrigin.RotateAround(mainCamera.transform.position, Vector3.up, stickDer.x * velocidadGiroSuave * Time.deltaTime);
-            actividadGiroSuave = Mathf.Abs(stickDer.x) * 2.2f;
+            // Curva progresiva cuadrática: permite encuadrar el edificio en Modo Dron con precisión fina sin tirones
+            float factorProgresivo = Mathf.Sign(stickDer.x) * Mathf.Pow((Mathf.Abs(stickDer.x) - 0.24f) / 0.76f, 1.35f);
+            xrOrigin.RotateAround(mainCamera.transform.position, Vector3.up, factorProgresivo * velocidadGiroSuave * Time.deltaTime);
+            actividadGiroSuave = Mathf.Abs(factorProgresivo) * 2.1f;
         }
 
         Vector3 frente = mainCamera.transform.forward;

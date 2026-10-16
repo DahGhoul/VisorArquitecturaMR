@@ -85,8 +85,8 @@ public partial class VisorArquitecturaManager : MonoBehaviour
     public bool usarGiroConfort = true;
     [Tooltip("Ángulo de rotación por cada pulso en modo Giro Confort (grados).")]
     public float anguloGiroConfort = 35.0f;
-    [Tooltip("Velocidad de giro continuo (grados/s) cuando se desactiva Giro Confort.")]
-    public float velocidadGiroSuave = 55.0f;
+    [Tooltip("Velocidad de giro suave orbital en Modo Dron (grados/s).")]
+    public float velocidadGiroSuave = 45.0f;
     [Tooltip("Activa la viñeta periférica antináusea automática al desplazarse.")]
     public bool usarVinetaConfort = true;
     [Tooltip("Factor de reducción métrica para el modo Maqueta AR.")]
