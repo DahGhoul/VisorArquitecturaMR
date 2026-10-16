@@ -143,12 +143,15 @@ public partial class VisorArquitecturaManager
         RectTransform rtVentana = ventana.GetComponent<RectTransform>();
 
         // Barra superior de títulos y acciones
-        CrearTextoUI("VISOR ARQUITECTÓNICO XR", rtVentana, new Vector2(-265f, 178f), new Vector2(290f, 32f), 16f, colTextoClaro, FontStyles.Bold, TextAlignmentOptions.Left);
-        textoEstadoUI = CrearTextoUI("Sincronizando red...", rtVentana, new Vector2(0f, 178f), new Vector2(240f, 32f), 12f, colTextoSecundario, FontStyles.Normal, TextAlignmentOptions.Left);
+        CrearTextoUI("VISOR ARQUITECTÓNICO XR", rtVentana, new Vector2(-275f, 178f), new Vector2(270f, 32f), 16f, colTextoClaro, FontStyles.Bold, TextAlignmentOptions.Left);
+        textoEstadoUI = CrearTextoUI("Sincronizando red...", rtVentana, new Vector2(-45f, 178f), new Vector2(200f, 32f), 11.5f, colTextoSecundario, FontStyles.Normal, TextAlignmentOptions.Left);
 
-        CrearBotonRedondeado("BTN_TOGGLE_PIN", "PIN", rtVentana, new Vector2(170f, 178f), new Vector2(60f, 34f), colBotonInactivo, colTextoClaro, 13f);
-        CrearBotonRedondeado("BTN_ACT_LIMPIAR_CACHE", "Limpiar Caché", rtVentana, new Vector2(265f, 178f), new Vector2(115f, 34f), colBotonInactivo, colTextoClaro, 12f);
-        CrearBotonRedondeado("BTN_ACT_REFRESCAR", "Actualizar", rtVentana, new Vector2(365f, 178f), new Vector2(75f, 34f), colBotonInactivo, colTextoClaro, 12f);
+        GameObject bGiro = CrearBotonRedondeado("BTN_TOGGLE_GIRO", usarGiroConfort ? "Giro: Confort" : "Giro: Suave", rtVentana, new Vector2(100f, 178f), new Vector2(96f, 34f), colBotonInactivo, colTextoClaro, 11.5f);
+        txtBtnGiroConfort = bGiro.GetComponentInChildren<TextMeshProUGUI>();
+
+        CrearBotonRedondeado("BTN_TOGGLE_PIN", "PIN", rtVentana, new Vector2(184f, 178f), new Vector2(54f, 34f), colBotonInactivo, colTextoClaro, 12.5f);
+        CrearBotonRedondeado("BTN_ACT_LIMPIAR_CACHE", "Limpiar Caché", rtVentana, new Vector2(272f, 178f), new Vector2(106f, 34f), colBotonInactivo, colTextoClaro, 11.5f);
+        CrearBotonRedondeado("BTN_ACT_REFRESCAR", "Actualizar", rtVentana, new Vector2(368f, 178f), new Vector2(72f, 34f), colBotonInactivo, colTextoClaro, 11.5f);
 
         // Divisor visual elegante
         GameObject linea = new GameObject("Linea_Divisoria");
@@ -295,6 +298,7 @@ public partial class VisorArquitecturaManager
             if (idx >= 0 && idx < listaNombresModelos.Count)
                 CargarModeloPorIdentificador(listaNombresModelos[idx]);
         }
+        else if (id == "BTN_TOGGLE_GIRO") AlternarModoGiroConfort();
         else if (id == "BTN_ACT_REFRESCAR") RefrescarListaModelos();
         else if (id == "BTN_ACT_LIMPIAR_CACHE") LimpiarCacheDescargasLocal();
         else if (id == "BTN_MODO_PEATON") ActivarModoPeaton1a1();

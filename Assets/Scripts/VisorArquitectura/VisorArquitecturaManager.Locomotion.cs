@@ -30,16 +30,107 @@ public partial class VisorArquitecturaManager
     // =========================================================================
 
     /// <summary>
-    /// Establece el modo de rastreo del suelo (Floor Origin) en el subsistema XR de Meta Quest.
+    /// Establece el modo de rastreo del suelo (Floor Origin), fija 90 FPS para eliminar latencia vestibular
+    /// e inicializa la viñeta periférica antináusea en el subsistema XR de Meta Quest.
     /// </summary>
     private void ConfigurarOrigenPisoQuest()
     {
+        Application.targetFrameRate = 90;
+        QualitySettings.vSyncCount = 0;
+
         List<XRInputSubsystem> subsystems = new List<XRInputSubsystem>();
         SubsystemManager.GetSubsystems(subsystems);
         foreach (var sub in subsystems)
         {
             sub.TrySetTrackingOriginMode(TrackingOriginModeFlags.Floor);
         }
+
+        InicializarVinetaConfort();
+    }
+
+    /// <summary>
+    /// Crea un túnel periférico suave (Comfort Vignette) acoplado a la cámara principal.
+    /// Reduce el flujo óptico en la retina periférica durante el movimiento para prevenir cinetosis (mareos VR).
+    /// </summary>
+    private void InicializarVinetaConfort()
+    {
+        if (mainCamera == null || imgVinetaConfort != null) return;
+
+        int res = 128;
+        Texture2D tex = new Texture2D(res, res, TextureFormat.RGBA32, false);
+        tex.wrapMode = TextureWrapMode.Clamp;
+        Color[] pix = new Color[res * res];
+        Vector2 centro = new Vector2(res * 0.5f, res * 0.5f);
+        float radioMax = res * 0.5f;
+
+        for (int y = 0; y < res; y++)
+        {
+            for (int x = 0; x < res; x++)
+            {
+                float distNorm = Vector2.Distance(new Vector2(x, y), centro) / radioMax;
+                // Centro 100% despejado hasta 0.58; degradado suave negro hacia los bordes periféricos
+                float a = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.58f, 0.96f, distNorm));
+                pix[y * res + x] = new Color(0.02f, 0.02f, 0.03f, a);
+            }
+        }
+        tex.SetPixels(pix);
+        tex.Apply();
+
+        Sprite sprVineta = Sprite.Create(tex, new Rect(0, 0, res, res), new Vector2(0.5f, 0.5f));
+
+        GameObject goCanvas = new GameObject("VR_ComfortVignette");
+        goCanvas.transform.SetParent(mainCamera.transform, false);
+        goCanvas.transform.localPosition = new Vector3(0f, 0f, 0.12f);
+        goCanvas.transform.localRotation = Quaternion.identity;
+        goCanvas.transform.localScale = new Vector3(0.001f, 0.001f, 0.001f);
+
+        Canvas c = goCanvas.AddComponent<Canvas>();
+        c.renderMode = RenderMode.WorldSpace;
+        c.sortingOrder = 999;
+
+        RectTransform rtCanvas = goCanvas.GetComponent<RectTransform>();
+        rtCanvas.sizeDelta = new Vector2(360f, 360f);
+
+        GameObject goImg = new GameObject("Ring");
+        goImg.transform.SetParent(rtCanvas, false);
+        RectTransform rtImg = goImg.AddComponent<RectTransform>();
+        rtImg.anchorMin = Vector2.zero;
+        rtImg.anchorMax = Vector2.one;
+        rtImg.offsetMin = Vector2.zero;
+        rtImg.offsetMax = Vector2.zero;
+
+        imgVinetaConfort = goImg.AddComponent<Image>();
+        imgVinetaConfort.sprite = sprVineta;
+        imgVinetaConfort.color = new Color(1f, 1f, 1f, 0f);
+        imgVinetaConfort.raycastTarget = false;
+    }
+
+    /// <summary>
+    /// Modula dinámicamente la opacidad de la viñeta periférica según la velocidad real del usuario.
+    /// </summary>
+    private void ActualizarVinetaConfort(float magnitudMovimiento)
+    {
+        if (imgVinetaConfort == null) return;
+        float objetivo = (usarVinetaConfort && !enModoMaqueta && magnitudMovimiento > 0.15f)
+            ? Mathf.Clamp01(magnitudMovimiento / 2.5f) * 0.78f
+            : 0f;
+        alphaVinetaActual = Mathf.MoveTowards(alphaVinetaActual, objetivo, 5.5f * Time.deltaTime);
+        imgVinetaConfort.color = new Color(1f, 1f, 1f, alphaVinetaActual);
+    }
+
+    /// <summary>
+    /// Alterna entre Giro Confort por pasos (Snap Turn 35°, antináusea) y Giro Suave Continuo.
+    /// </summary>
+    public void AlternarModoGiroConfort()
+    {
+        usarGiroConfort = !usarGiroConfort;
+        if (txtBtnGiroConfort != null)
+        {
+            txtBtnGiroConfort.text = usarGiroConfort ? "Giro: Confort" : "Giro: Suave";
+        }
+        ActualizarEstado(usarGiroConfort
+            ? "Giro Confort activo (pasos de 35° sin mareo)."
+            : "Giro Suave continuo activo.");
     }
 
     /// <summary>
@@ -200,11 +291,26 @@ public partial class VisorArquitecturaManager
         {
             if (cuerpoJugador != null && cuerpoJugador.enabled) cuerpoJugador.enabled = false;
             velocidadVerticalY = 0f;
+            ActualizarVinetaConfort(0f);
             return;
         }
 
-        // Giro Suave Continuo pivotado sobre la posición de la cabeza
-        if (Mathf.Abs(stickDer.x) > 0.2f)
+        // --- ROTACIÓN DE CÁMARA ANTINÁUSEA (GIRO CONFORT POR PASOS O GIRO SUAVE) ---
+        if (usarGiroConfort)
+        {
+            if (Mathf.Abs(stickDer.x) < 0.25f)
+            {
+                snapTurnListo = true;
+            }
+            else if (Mathf.Abs(stickDer.x) > 0.60f && (snapTurnListo || Time.unscaledTime - tiempoUltimoSnapTurn > 0.34f))
+            {
+                float signo = Mathf.Sign(stickDer.x);
+                xrOrigin.RotateAround(mainCamera.transform.position, Vector3.up, signo * anguloGiroConfort);
+                snapTurnListo = false;
+                tiempoUltimoSnapTurn = Time.unscaledTime;
+            }
+        }
+        else if (Mathf.Abs(stickDer.x) > 0.22f)
         {
             xrOrigin.RotateAround(mainCamera.transform.position, Vector3.up, stickDer.x * velocidadGiroSuave * Time.deltaTime);
         }
@@ -219,7 +325,8 @@ public partial class VisorArquitecturaManager
         if (derecha.sqrMagnitude < 0.001f) derecha = Vector3.right;
         derecha.Normalize();
 
-        Vector3 inputDir = frente * stickIzq.y + derecha * stickIzq.x;
+        Vector2 stickIzqLimpio = stickIzq.magnitude > 0.14f ? stickIzq : Vector2.zero;
+        Vector3 inputDir = frente * stickIzqLimpio.y + derecha * stickIzqLimpio.x;
         if (Keyboard.current != null)
         {
             if (Keyboard.current.wKey.isPressed) inputDir += frente;
@@ -229,48 +336,54 @@ public partial class VisorArquitecturaManager
         }
         if (inputDir.sqrMagnitude > 1f) inputDir.Normalize();
 
-        // --- MODO DRON FLUIDO (VUELO LIBRE 3D) ---
+        // --- MODO DRON ESTABILIZADO EN HORIZONTE (CERO MAREO POR CABECEO) ---
         if (modoDron)
         {
             if (cuerpoJugador != null && cuerpoJugador.enabled) cuerpoJugador.enabled = false;
 
-            // Desplazamiento 3D referenciado a la orientación de la cabeza
-            Vector3 frente3D = mainCamera.transform.forward;
-            Vector3 derecha3D = mainCamera.transform.right;
-            Vector3 deseoDron = (frente3D * stickIzq.y + derecha3D * stickIzq.x) * velocidadDron;
+            // El Stick Izquierdo desplaza sobre el plano horizontal (frente/derecha nivelados al horizonte)
+            // para que mirar arriba/abajo con el casco no provoque curvas tipo montaña rusa.
+            Vector3 deseoDron = inputDir * velocidadDron;
 
-            if (Mathf.Abs(stickDer.y) > 0.15f)
+            // El Stick Derecho (arriba/abajo) controla la elevación vertical como una grúa estable
+            if (Mathf.Abs(stickDer.y) > 0.20f)
             {
-                deseoDron.y += stickDer.y * (velocidadDron * 0.85f);
+                deseoDron.y += stickDer.y * (velocidadDron * 0.70f);
             }
 
             if (Keyboard.current != null)
             {
-                if (Keyboard.current.wKey.isPressed) deseoDron += frente3D * velocidadDron;
-                if (Keyboard.current.sKey.isPressed) deseoDron -= frente3D * velocidadDron;
-                if (Keyboard.current.aKey.isPressed) deseoDron -= derecha3D * velocidadDron;
-                if (Keyboard.current.dKey.isPressed) deseoDron += derecha3D * velocidadDron;
-                if (Keyboard.current.eKey.isPressed || Keyboard.current.spaceKey.isPressed) deseoDron.y += velocidadDron * 0.85f;
-                if (Keyboard.current.qKey.isPressed || Keyboard.current.cKey.isPressed) deseoDron.y -= velocidadDron * 0.85f;
+                if (Keyboard.current.eKey.isPressed || Keyboard.current.spaceKey.isPressed) deseoDron.y += velocidadDron * 0.70f;
+                if (Keyboard.current.qKey.isPressed || Keyboard.current.cKey.isPressed) deseoDron.y -= velocidadDron * 0.70f;
             }
 
-            velocidadSuavizada = Vector3.Lerp(velocidadSuavizada, deseoDron, 10f * Time.deltaTime);
+            // Frenado instantáneo al soltar el joystick (elimina el deslizamiento inercial que causa náuseas)
+            float tasaRespuestaDron = deseoDron.sqrMagnitude > 0.01f ? 14f : 28f;
+            velocidadSuavizada = Vector3.MoveTowards(velocidadSuavizada, deseoDron, tasaRespuestaDron * Time.deltaTime);
             xrOrigin.position += velocidadSuavizada * Time.deltaTime;
+            ActualizarVinetaConfort(velocidadSuavizada.magnitude);
             Physics.SyncTransforms();
             return;
         }
 
-        // --- MODO PEATÓN 1:1 CON SENSOR ESFÉRICO Y APOYO CONTINUO ---
-        if (!modeloCargado) return;
+        // --- MODO PEATÓN 1:1 CON SENSOR ESFÉRICO Y FRENADO LIMPIO ---
+        if (!modeloCargado)
+        {
+            ActualizarVinetaConfort(0f);
+            return;
+        }
         if (cuerpoJugador != null && !cuerpoJugador.enabled) cuerpoJugador.enabled = true;
 
-        velocidadSuavizada = Vector3.Lerp(velocidadSuavizada, inputDir * velocidadCaminar, 12f * Time.deltaTime);
+        Vector3 deseoCaminar = inputDir * velocidadCaminar;
+        float tasaRespuestaPeaton = deseoCaminar.sqrMagnitude > 0.01f ? 15f : 30f;
+        velocidadSuavizada = Vector3.MoveTowards(velocidadSuavizada, deseoCaminar, tasaRespuestaPeaton * Time.deltaTime);
 
         // Movimiento horizontal amortiguado por muros estructurales
         if (cuerpoJugador != null && cuerpoJugador.enabled)
         {
             cuerpoJugador.Move(new Vector3(velocidadSuavizada.x, 0f, velocidadSuavizada.z) * Time.deltaTime);
         }
+        ActualizarVinetaConfort(velocidadSuavizada.magnitude);
 
         // Sensor esférico de apoyo vertical (detecta escalones y losas sin atascos)
         Vector3 posCabeza = mainCamera.transform.position;

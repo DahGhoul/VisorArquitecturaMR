@@ -76,13 +76,19 @@ public partial class VisorArquitecturaManager : MonoBehaviour
     [Tooltip("Código PIN de 4 dígitos para sincronización local.")]
     public string pinIngresado = "";
 
-    [Header("3. Parámetros de Recorrido")]
-    [Tooltip("Velocidad de desplazamiento en modo Peatón (m/s).")]
-    public float velocidadCaminar = 3.4f;
-    [Tooltip("Velocidad de desplazamiento en modo Dron / Vuelo (m/s).")]
-    public float velocidadDron = 5.8f;
-    [Tooltip("Velocidad de giro continuo con stick derecho (grados/s).")]
-    public float velocidadGiroSuave = 70.0f;
+    [Header("3. Parámetros de Recorrido y Confort VR (Antináusea)")]
+    [Tooltip("Velocidad de desplazamiento en modo Peatón (m/s) calibrada a paso humano natural.")]
+    public float velocidadCaminar = 2.2f;
+    [Tooltip("Velocidad de desplazamiento en modo Dron / Vuelo (m/s) estabilizada.")]
+    public float velocidadDron = 3.8f;
+    [Tooltip("Activa el Giro Confort por pasos instantáneos (Snap Turn) para evitar mareos al rotar cámara.")]
+    public bool usarGiroConfort = true;
+    [Tooltip("Ángulo de rotación por cada pulso en modo Giro Confort (grados).")]
+    public float anguloGiroConfort = 35.0f;
+    [Tooltip("Velocidad de giro continuo (grados/s) cuando se desactiva Giro Confort.")]
+    public float velocidadGiroSuave = 55.0f;
+    [Tooltip("Activa la viñeta periférica antináusea automática al desplazarse.")]
+    public bool usarVinetaConfort = true;
     [Tooltip("Factor de reducción métrica para el modo Maqueta AR.")]
     public float escalaMaquetaActual = 0.03f;
 
@@ -124,6 +130,11 @@ public partial class VisorArquitecturaManager : MonoBehaviour
     private float velocidadVerticalY = 0f;
     private float yawPC = 0f;
     private float pitchPC = 0f;
+    private bool snapTurnListo = true;
+    private float tiempoUltimoSnapTurn = 0f;
+    private Image imgVinetaConfort;
+    private float alphaVinetaActual = 0f;
+    private TextMeshProUGUI txtBtnGiroConfort;
 
     private Vector3 posCentradaOriginal;
     private Vector3 centroLocalModelo = Vector3.zero;
