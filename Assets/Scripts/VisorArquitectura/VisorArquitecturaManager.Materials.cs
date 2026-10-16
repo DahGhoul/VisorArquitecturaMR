@@ -415,10 +415,11 @@ public partial class VisorArquitecturaManager
             }
         }
 
-        // CULLING NATIVO: Respeta la especificación glTF 2.0 exportada por el motor BIM/CAD
-        int cullOriginal = matOrig.HasProperty("_Cull") ? matOrig.GetInt("_Cull") : (int)UnityEngine.Rendering.CullMode.Back;
-        m.SetInt("_Cull", cullOriginal);
-        if (m.HasProperty("_Cull")) m.SetFloat("_Cull", (float)cullOriginal);
+        // DOBLE CARA UNIVERSAL EN SÓLIDOS ARQUITECTÓNICOS:
+        // Garantiza que techos, losas y muros de SketchUp sean siempre visibles desde adentro/abajo y desde arriba/afuera.
+        m.SetInt("_Cull", (int)UnityEngine.Rendering.CullMode.Off);
+        if (m.HasProperty("_Cull")) m.SetFloat("_Cull", (float)UnityEngine.Rendering.CullMode.Off);
+        if (m.HasProperty("_CullMode")) m.SetFloat("_CullMode", (float)UnityEngine.Rendering.CullMode.Off);
 
         // ---------------------------------------------------------------------
         // LEY UNIVERSAL 5: LÁMINAS DELGADAS Y MURALES
